@@ -1,0 +1,74 @@
+---
+title: "ggrob_OriginalHomeworkCode_05"
+author: "Gianna Grob"
+date: "11/6/2019"
+output: html_document
+---
+
+# Question 1
+
+Using the “KamilarAndCooperData.csv” dataset, run a linear regression looking at log(HomeRange_km2) in relation to log(Body_mass_female_mean) and report your β coeffiecients (slope and intercept).
+
+```{r}
+#Load in data
+
+library(curl)
+f <- curl("https://raw.githubusercontent.com/fuzzyatelin/fuzzyatelin.github.io/master/AN597_Fall19/KamilarAndCooperData.csv")
+d <- read.csv(f, header = TRUE, sep = ",", stringsAsFactors = FALSE) #Load in our data
+head(d) #See summary of data
+
+#Transform data to log
+
+library(ggplot2)
+
+d$logHomeRange_km2 <- log(d$HomeRange_km2)
+d$logBody_mass_female_mean <- log(d$Body_mass_female_mean)
+
+g <- ggplot(data = d, aes(x = logHomeRange_km2, y = logBody_mass_female_mean))
+g <- g + geom_point() 
+g <- g + geom_smooth(method = "lm", se=FALSE, formula = y ~ x)
+g 
+
+#Great, the data looks normal when transformed; time to get our beta values.
+
+m <- lm(data = d, logHomeRange_km2 ~ logBody_mass_female_mean) #Fit to linear regression model
+summary(m) #See summary of the data
+```
+
+The intercept value is -9.44123 and the beta for the Body_mass_female_mean is 1.03643. 
+
+# Question 2
+
+Then, use bootstrapping to sample from your data 1000 times with replacement, each time fitting the same model and calculating the same coefficients. This generates a sampling distribution for each β coefficient.
+
+* Estimate the standard error for each of your β coefficients as the standard deviation of the sampling distribution from your bootstrap and determine the 95% CI for each of your β coefficients based on the appropriate quantiles from your sampling distribution.
+
+* How does the former compare to the SE estimated from your entire dataset using the formula for standard error implemented in lm()?
+
+* How does the latter compare to the 95% CI estimated from your entire dataset?
+
+```{r}
+#Bootstrapping mehtod found online, gives a lot of red messages
+
+n = dim(d)[1] ## number of obs in data
+B = 1000 ## number of bootstrap samples
+
+results = matrix(data = NA, nrow = B, ncol = 3, 
+                 dimnames = list(NULL, c("Intercept", "logHomeRange_km2", "logBody_mass_female_mean")))
+
+## begin bootstrap for-loop
+for(b in 1:B){
+  i = sample(x = 1:n, size = n, replace = TRUE) ## sample indices
+  temp = d[i,] ## temp data set
+  temp_model =  lm(formula = logHomeRange_km2 ~ logBody_mass_female_mean, data = temp) ## train model
+  coeff = matrix(data = coefficients(temp_model), ncol = 3) ## get coefficients
+  results[b,] = coeff ## save coefficients in matrix
+}
+
+results <- data.frame(results, check.names = FALSE)
+
+summary(results) ## take a look at the samples
+
+```
+
+Not sure if that bootstrapping is correct, but need to upload for peer commentary. Will look more into tonight and this weekend. 
