@@ -1,0 +1,96 @@
+---
+title: "ggrob_FinalHomeworkCode_05"
+author: "Gianna Grob"
+date: "11/6/2019"
+output: html_document
+---
+
+# Question 1
+
+Using the “KamilarAndCooperData.csv” dataset, run a linear regression looking at log(HomeRange_km2) in relation to log(Body_mass_female_mean) and report your β coeffiecients (slope and intercept).
+
+```{r}
+#Load in data
+
+library(curl)
+f <- curl("https://raw.githubusercontent.com/fuzzyatelin/fuzzyatelin.github.io/master/AN597_Fall19/KamilarAndCooperData.csv")
+d <- read.csv(f, header = TRUE, sep = ",", stringsAsFactors = FALSE) #Load in our data
+head(d) #See summary of data
+
+#Transform data to log
+
+library(ggplot2)
+
+d$logHomeRange_km2 <- log(d$HomeRange_km2)
+d$logBody_mass_female_mean <- log(d$Body_mass_female_mean)
+
+g <- ggplot(data = d, aes(x = logHomeRange_km2, y = logBody_mass_female_mean))
+g <- g + geom_point() 
+g <- g + geom_smooth(method = "lm", se=FALSE, formula = y ~ x)
+g 
+
+#Great, the data looks normal when transformed; time to get our beta values.
+
+m <- lm(data = d, logHomeRange_km2 ~ logBody_mass_female_mean) #Fit to linear regression model
+summary(m) #See summary of the data
+```
+
+The intercept value is -9.44123 and the beta for the Body_mass_female_mean is 1.03643. 
+
+# Question 2
+
+Then, use bootstrapping to sample from your data 1000 times with replacement, each time fitting the same model and calculating the same coefficients. This generates a sampling distribution for each β coefficient.
+
+```{r}
+#Bootstrapping method that gives a lot of red warning messages
+
+n = dim(d)[1] ## number of obs in data
+B = 1000 ## number of bootstrap samples
+
+results = matrix(data = NA, nrow = B, ncol = 3, 
+                 dimnames = list(NULL, c("Intercept", "logHomeRange_km2", "logBody_mass_female_mean")))
+
+## begin bootstrap for-loop
+for(b in 1:B){
+  i = sample(x = 1:n, size = n, replace = TRUE) ## sample indices
+  temp = d[i,] ## temp data set
+  temp_model =  lm(formula = (log(d$HomeRange_km2)) ~ (log(d$Body_mass_female_mean)), data = temp) ## train model
+  coeff = matrix(data = coefficients(temp_model), ncol = 3) ## get coefficients
+  results[b,] = coeff ## save coefficients
+}
+```
+
+The method I used with help from a source online provides a for loop that works, but gives a lot of warning messages. I'm not sure how to get rid of these, or if this makes the results bad. I can't figure out how to do it otherwise, so I will keep it.
+
+* Estimate the standard error for each of your β coefficients as the standard deviation of the sampling distribution from your bootstrap and determine the 95% CI for each of your β coefficients based on the appropriate quantiles from your sampling distribution.
+
+```{r}
+se <- sd(results)
+se
+
+#The SE if 4.94 according to this.
+
+#Finding the 95% CI
+quantile(results, c(0.025, 0.975))
+```
+
+
+* How does the former compare to the SE estimated from your entire dataset using the formula for standard error implemented in lm()?
+* How does the latter compare to the 95% CI estimated from your entire dataset?
+
+```{r}
+summary(m) #Will show SE in my entire dataset 
+confint(m) #will show CI for entire dataset
+```
+
+The SE from my dataset is 1.423, while the SE for my bootstrapping is 4.98; both values are very different. My confidence interval for my bootstrapping has the estimate values for the model, but does not match the confidence interval values for the orginial dataset. Is this right? It's weird that the confidence interval matches the estimates. Not sure if my bootstrapping method is the best, but I can't figure out another way to get it to work without using code from peers. 
+
+
+Challenges:
+
+1. Creating bootsrapping for loop.
+2. Finding confidence interval for my for loop results.
+3. Compaing the standard errors for model to the bootstrap. Should the values be the same or different?
+4. Should the confidence interval for bootstrap be the values for the model estimates? I'm not sure, and if this is wrong I can't figure it out.
+5. A peer did two for loops, one for intercept and one for slope. Was I supposed to do that? Can't figure out what exactly is wanted. 
+
